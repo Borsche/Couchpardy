@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>COUCHPARDY!</title>
+    </head>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;600&display=swap');
+
+        :root {
+            --purple-light: #ac39f8;
+            --half-purple-light: #ac39f888;
+            --tenth-purple-light: #ac39f825;
+            --purple: #740eb8;
+            --purple-mid: #4e087e;
+            --quarter-purple-mid: #4e087e2a;
+            --purple-dark: #160124;
+            --threequarter-purple-dark: #160124ce;
+            --white: #FFFFFF;
+            --off-white: #F0EFEA;
+            --half-white: #f0efea80;
+            --red: #E53935;
+            --green: #43A047;
+            --radius: 6px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Barlow Condensed', sans-serif;
+            background: var(--purple-dark);
+            color: var(--white);
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image:
+            linear-gradient(var(--quarter-purple-mid) 1px, transparent 1px),
+            linear-gradient(90deg, var(--quarter-purple-mid) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* -- SCREENS -- */
+        .screen { 
+            display: none; 
+            z-index: 1; 
+            min-height: 100vh; 
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .screen.center {
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .screen.active { 
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* -- HEADER -- */
+        .logo {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(3rem, 8vw, 6rem);
+            letter-spacing: 0.06em;
+            color: var(--purple);
+            line-height: 0;
+        }
+
+        .logo .logo-exclamation {
+            background: linear-gradient(180deg, var(--purple-light) 0%, var(--purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* -- MAIN MENU -- */
+        .menu-subtitle {
+            font-family: 'Barlow', sans-serif;
+            color: var(--half-white);
+            font-size: 0.9rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-bottom: 2.5rem;
+        }
+        .menu-buttons { display: flex; flex-direction: column; gap: 0.75rem; }
+
+        /* -- COMPONENTS -- */
+        .card {
+            background: linear-gradient(135deg, var(--half-purple-light) 0%, var(--purple-dark) 100%);
+            border: 1px solid var(--purple-light);
+            border-radius: 12px;
+            padding: 2.5rem 3rem;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 0 60px var(--quarter-purple-mid) inset;
+        }
+
+        /* -- BUTTONS -- */
+        .btn {
+            padding: 0.85rem 2rem;
+            border: none;
+            border-radius: var(--radius);
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.18s;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: var(--tenth-purple-light);
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .btn:hover::after { opacity: 1; }
+        .btn:active { transform: scale(0.97); }
+
+        .btn-sm { padding: 0.45rem 1rem; font-size: 0.9rem; }
+        .btn-icon { padding: 0.45rem 0.7rem; font-size: 0.8rem; }
+
+        /* -- SETTINGS SCREEN -- */
+        .settings-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--half-purple-light);
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        .settings-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem;
+            color: var(--white);
+            letter-spacing: 0.08em;
+        }
+        .settings-toolbar {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .settings-footer {
+            display:flex;
+            gap:0.5rem;
+            padding:0.75rem;
+            border-top:1px solid var(--half-purple-light)
+        }
+        .settings-empty { color:var(--half-white); padding-top: 2rem; font-size:0.95rem; }
+
+        .profile-select {
+            background: var(--quarter-purple-mid);
+            border: 1px solid var(--half-purple-light);
+            color: var(--white);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .profile-select option { background: var(--purple-dark); color: #fff; }
+
+        .settings-body {
+            display: flex;
+            gap: 1.5rem;
+            flex: 1;
+            overflow: hidden;
+        }
+        .categories-list {
+            width: 220px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            overflow-y: auto;
+        }
+        .category-item {
+            background: var(--quarter-purple-mid);
+            border: 1px solid var(--half-purple-light);
+            border-radius: var(--radius);
+            padding: 0.7rem 1rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .category-item:hover, .category-item.active {
+            border-color: var(--white);
+            background: var(--half-purple-light);
+            color: var(--white);
+        }
+        .category-delete { opacity: 0.4; font-size: 0.75rem; padding: 2px 6px; }
+        .category-delete:hover { opacity: 1; color: var(--red); }
+
+        .category-editor {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .category-name-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .input-field {
+            background: var(--quarter-purple-mid);
+            border: 1px solid var(--half-purple-light);
+            border-radius: var(--radius);
+            color: var(--white);
+            padding: 0.6rem 0.9rem;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 1rem;
+            transition: border-color 0.15s;
+            width: 100%;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: var(--white);
+            background: var(--tenth-purple-light);
+        }
+        .input-field::placeholder { color: var(--half-white); }
+
+        .questions-settings-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+        .question-settings-card {
+            background: var(--quarter-purple-mid);
+            border: 1px solid var(--tenth-purple-light);
+            border-radius: var(--radius);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+        .question-settings-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+        .question-settings-points-badge {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.1rem;
+            color: var(--white);
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+        .question-settings-tabs { display: flex; gap: 0.25rem; }
+        .question-settings-tab {
+            padding: 0.2rem 0.6rem;
+            font-size: 0.75rem;
+            border: 1px solid var(--half-purple-light);
+            border-radius: 4px;
+            background: transparent;
+            color: var(--half-white);
+            cursor: pointer;
+            font-family: 'Barlow Condensed', sans-serif;
+            transition: all 0.12s;
+        }
+        .question-settings-tab.active { background: var(--half-purple-light); color: var(--white); border-color: var(--white); }
+        .question-settings-content-area { display: flex; flex-direction: column; gap: 0.5rem; }
+        textarea.input-field { resize: vertical; min-height: 60px; }
+
+        .img-preview-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .img-thumb {
+            width: 80px;
+            height: 55px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid var(--white);
+        }
+        .img-clear { font-size: 0.75rem; }
+
+        /* -- MODAL -- */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: var(--threequarter-purple-dark);
+            backdrop-filter: blur(6px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal-overlay.open { display: flex; }
+
+        .modal.card {
+            border: 2px solid var(--purple-light);
+            padding: 2rem;
+            position: relative;
+            max-width: 680px;
+        }
+        .modal {
+            animation: modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes modalIn { from { opacity:0; transform: scale(0.85); } to { opacity:1; transform: none; } }
+
+        .modal-category {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 1rem;
+            color: var(--half-white);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-bottom: 0.25rem;
+        }
+        .modal-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 3rem;
+            color: var(--white);
+            letter-spacing: 0.06em;
+            line-height: 1;
+            margin-bottom: 1.5rem;
+        }
+        .modal-question {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: clamp(1.1rem, 2.5vw, 1.6rem);
+            font-weight: 600;
+            color: var(--white);
+            text-align: center;
+            line-height: 1.4;
+            margin-bottom: 1.5rem;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-question img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+        .modal-answer-wrap {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.4s ease;
+        }
+        .modal-answer-wrap.revealed { max-height: 300px; }
+        .modal-answer {
+            background: var(--quarter-purple-mid);
+            border: 1px solid var(--half-white);
+            border-radius: 6px;
+            padding: 1rem;
+            text-align: center;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        .modal-answer img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 6px;
+            object-fit: contain;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        .modal-scoring {
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .modal-scoring.visible { display: flex; }
+        .scoring-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.1rem;
+            color: var(--white);
+            letter-spacing: 0.08em;
+            text-align: center;
+        }
+        .scoring-players {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px,1fr));
+            gap: 0.4rem;
+        }
+        .scoring-player-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+            padding: 0.5rem;
+            border: 1px solid var(--half-white);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--white);
+            cursor: pointer;
+            font-family: 'Barlow Condensed', sans-serif;
+            transition: all 0.15s;
+        }
+        .scoring-player-btn:hover { 
+            border-color: var(--gold); 
+            background: var(--tenth-purple-light); 
+        }
+        .scoring-player-name { font-size: 0.95rem; font-weight: 600; }
+        .scoring-player-score { font-size: 0.8rem; color: rgba(255,255,255,0.5); }
+        .btn-correct { background: linear-gradient(180deg, #4caf50,#2e7d32); color:#fff; border:none; }
+        .btn-wrong { background: linear-gradient(180deg, #e53935,#b71c1c); color:#fff; border:none; }
+        .btn-correct:hover, .btn-wrong:hover { filter: brightness(1.1); }
+
+        .close-modal {
+            position: absolute;
+            top: 0.75rem; right: 0.75rem;
+            background: transparent;
+            border: 1px solid var(--half-white);
+            border-radius: 50%;
+            width: 32px; height: 32px;
+            color: var(--half-white);
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .close-modal:hover { border-color: var(--red); color: var(--red); }
+
+        /* -- START GAME SCREEN -- */
+        .start-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.8rem;
+            color: var(--gold);
+            letter-spacing: 0.08em;
+            text-align: center;
+        }
+        .players-list { display: flex; flex-direction: column; gap: 0.5rem; }
+        .player-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: fadeIn 0.25s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+        .add-player-row { display: flex; gap: 0.5rem; }
+        .color-dot {
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 2px solid var(--half-white);
+        }
+
+        /* ── GAME BOARD ── */
+        .game-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 1.2rem;
+            border-bottom: 2px solid var(--half-white);
+            flex-shrink: 0;
+        }
+        .game-logo {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.8rem;
+            background: linear-gradient(180deg, var(--white) 0%, var(--half-white) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.08em;
+        }
+
+        .board-wrap {
+            flex: 1;
+            overflow: hidden;
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .board {
+            display: grid;
+            gap: 0.4rem;
+            flex: 1;
+            height: 100%;
+        }
+        .board-cell {
+            background: linear-gradient(180deg, var(--purple-light) 0%, var(--purple-mid) 100%);
+            border: 2px solid var(--purple-dark);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            position: relative;
+            overflow: hidden;
+        }
+        .board-cell:hover:not(.used):not(.header-cell) {
+            border-color: var(--white);
+            background: linear-gradient(180deg, var(--purple-light) 0%, var(--half-purple-light) 100%);
+            transform: scale(1.02);
+            z-index: 2;
+            box-shadow: 0 0 20px var(--half-white);
+        }
+        .board-cell.used {
+            background: var(--purple-mid);
+            border-color: var(--purple-dark);
+            cursor: default;
+        }
+        .board-cell.used::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: var(--threequarter-purple-dark);
+        }
+        .header-cell {
+            background: linear-gradient(180deg, var(--quarter-purple-mid) 0%, var(--purple-mid) 100%);
+            border-color: var(--purple-dark);
+            cursor: default;
+            padding: 0.3rem;
+        }
+        .cat-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(0.7rem, 1.6vw, 1.1rem);
+            letter-spacing: 0.06em;
+            color: var(--white);
+            text-transform: uppercase;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+        .cell-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(1rem, 3vw, 2.2rem);
+            color: var(--white);
+            letter-spacing: 0.04em;
+        }
+
+        /* ── PLAYERS BAR ── */
+        .players-bar {
+            display: flex;
+            gap: 0.4rem;
+            padding: 0.5rem;
+            border-top: 2px solid var(--half-white);
+            flex-shrink: 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .player-score-card {
+            background: var(--purple-mid);
+            border: 2px solid transparent;
+            border-radius: 6px;
+            padding: 0.4rem 0.9rem;
+            text-align: center;
+            min-width: 110px;
+            transition: all 0.2s;
+        }
+        .player-score-name {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 0.85rem;
+            color: var(--off-white);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            white-space: nowrap;
+        }
+        .player-score-val {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.5rem;
+            letter-spacing: 0.05em;
+            line-height: 1.1;
+        }
+
+        /* ── WINNER SCREEN ── */
+        .winner-confetti {
+            font-size: 4rem;
+            animation: bounce 0.6s infinite alternate;
+        }
+        @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.15); } }
+        .winner-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(2rem, 8vw, 5rem);
+            filter: drop-shadow(0 0 30px var(--white));
+            letter-spacing: 0.08em;
+        }
+        .winner-name {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(1.5rem, 5vw, 3.5rem);
+            color: var(--white);
+        }
+        .final-scores { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; max-width: 400px; }
+        .final-score-row {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--quarter-purple-mid);
+            border: 1px solid var(--off-white);
+            border-radius: 6px; padding: 0.6rem 1rem;
+        }
+        .final-score-row.winner-row { border-color: var(--white); background: var(--purple-mid); }
+        .final-rank { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; }
+        .final-name { font-weight: 600; }
+        .final-pts { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; }
+
+        /* -- PROFILE MODAL -- */
+        .profile-modal-body { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 0.75rem; 
+            margin-top: 1rem;
+        }
+        .profile-list-item {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--quarter-purple-mid);
+            border: 1px solid var(--half-purple-light);
+            border-radius: 6px; padding: 0.6rem 1rem;
+        }
+        .profile-list-item.active-profile { 
+            border-color: var(--white);
+            background: var(--half-purple-light);
+            color: var(--white); 
+        }
+
+        /* ── TOAST ── */
+        .toast-container { 
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .toast {
+            background: rgba(1,8,48,0.95);
+            border: 1px solid rgba(255,215,0,0.4);
+            border-radius: 6px;
+            padding: 0.75rem 1.2rem;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 0.95rem;
+            animation: toastIn 0.25s ease, toastOut 0.3s ease 2.5s forwards;
+            backdrop-filter: blur(8px);
+        }
+        .toast.success { 
+            border-color: var(--green);
+            color: #a5d6a7;
+        }
+        .toast.error {
+            border-color: var(--red);
+            color: #ef9a9a;
+        }
+        @keyframes toastIn { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform: none; } }
+        @keyframes toastOut { from { opacity:1; } to { opacity:0; } }
+
+        /* misc */
+        .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--half-white), transparent); }
+        .text-muted { 
+            color: var(--half-white);
+            font-size:0.85rem;
+        }
+        .flex-row { display:flex; gap:0.5rem; align-items:center; }
+        .flex-col { display:flex; flex-direction:column; gap:0.5rem; }
+        label.field-label { font-size:0.8rem; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase; } /* delete? */
+        .p-0 {
+            padding: 0;
+        }
+    </style>
+    <body>
+        <!-- ===== MAIN MENU ===== -->
+        <div id="screen-menu" class="screen center active">
+            <div class="logo"><span>COUCHPARDY</span><span class="logo-exclamation">!</span></div>
+            <p class="menu-subtitle">JEOPARDY WITH FRIENDS!</p>
+            <div class="card">
+                <div class="menu-buttons">
+                    <button class="btn" onclick="showScreen('screen-start')">▶ Spiel starten</button>
+                    <button class="btn" onclick="showScreen('screen-settings')">⚙ Einstellungen / Kategorien</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== SETTINGS SCREEN ===== -->
+        <div id="screen-settings" class="screen">
+            <div class="settings-header">
+                <div class="settings-title">⚙ EINSTELLUNGEN</div>
+                <div class="settings-toolbar">
+                    <label class="field-label" style="white-space:nowrap">Profil:</label>
+                    <select class="profile-select" id="profileSelect" onchange="loadProfile(this.value)"></select>
+                    <button class="btn btn-sm" onclick="openProfileManager()">Profile</button>
+                    <button class="btn btn-sm" onclick="saveCurrentProfile()">Speichern</button>
+                    <button class="btn btn-sm" onclick="showScreen('screen-menu')">< Zurück</button>
+                </div>
+            </div>
+            <div class="settings-body">
+                <!-- Category Sidebar -->
+                <div class="categories-list" id="categoriesList"></div>
+                <!-- Editor -->
+                <div class="category-editor" id="categoryEditor">
+                    <p class="settings-empty">← Wähle eine Kategorie oder füge eine neue hinzu</p>
+                </div>
+            </div>
+            <!-- Add Category -->
+            <div class="settings-footer">
+                <input class="input-field" id="newCatName" placeholder="Neue Kategorie…" style="max-width:260px">
+                <button class="btn btn-sm" onclick="addCategory()">+ Kategorie</button>
+            </div>
+        </div>
+
+        <!-- ===== START GAME SCREEN ===== -->
+        <div id="screen-start" class="screen center">
+            <div class="card flex-col" style="margin:auto; gap: 1.5rem">
+                <div class="start-title">SPIEL STARTEN</div>
+
+                <div class="flex-col">
+                    <label class="field-label">Profil</label>
+                    <select class="profile-select" id="startProfileSelect" onchange="setActiveProfile(this.value)"></select>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="flex-col">
+                    <label class="field-label">Spieler / Teams</label>
+                    <div class="players-list" id="playersList"></div>
+                    <div class="flex-row">
+                        <input class="input-field" id="newPlayerName" placeholder="Spielername…" onkeypress="if(event.key==='Enter')addPlayer()">
+                        <button class="btn btn-sm" onclick="addPlayer()">+</button>
+                    </div>
+                </div>
+
+                <div class="flex-row" style="justify-content:space-between; margin-top:0.5rem">
+                    <button class="btn btn-sm" onclick="showScreen('screen-menu')">← Zurück</button>
+                    <button class="btn" onclick="startGame()">▶ Los!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== GAME SCREEN ===== -->
+        <div id="screen-game" class="screen p-0">
+            <div class="game-header">
+                <div class="game-logo">COUCHPARDY!</div>
+                <button class="btn btn-ghost btn-sm" onclick="endGame()">✕ Beenden</button>
+            </div>
+            <div class="board-wrap">
+                <div class="board" id="gameBoard"></div>
+            </div>
+            <div class="players-bar" id="playersBar"></div>
+        </div>
+
+        <!-- ===== WINNER SCREEN ===== -->
+        <div id="screen-winner" class="screen center">
+            <div class="winner-title">GEWINNER!</div>
+            <div class="winner-name winner-confetti" id="winnerName"></div>
+            <div class="final-scores" id="finalScores"></div>
+            <button class="btn btn-gold" onclick="showScreen('screen-menu')">Hauptmenü</button>
+        </div>
+
+        <!-- ===== QUESTION MODAL ===== -->
+        <div class="modal-overlay" id="questionModal">
+            <div class="modal card">
+                <button class="close-modal" onclick="closeModal()">✕</button>
+                <div class="modal-category" id="modalCategory"></div>
+                <div class="modal-value" id="modalValue"></div>
+                <div class="modal-question" id="modalQuestion"></div>
+
+                <div id="modalAnswerWrap" class="modal-answer-wrap">
+                    <div class="modal-answer" id="modalAnswer"></div>
+                </div>
+
+                <div class="modal-actions" id="modalActions">
+                    <button class="btn btn-blue" id="revealBtn" onclick="revealAnswer()">Antwort zeigen</button>
+                </div>
+
+                <div class="modal-scoring" id="modalScoring">
+                    <div class="scoring-title">Wer hat richtig geantwortet?</div>
+                    <div class="scoring-players" id="scoringPlayers"></div>
+                    <div style="display:flex;gap:0.5rem;justify-content:center;margin-top:0.5rem;flex-wrap:wrap">
+                        <button class="btn btn-sm btn-wrong" onclick="noOneCorrect()">Niemand richtig</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== PROFILE MANAGER MODAL ===== -->
+        <div class="modal-overlay" id="profileModal">
+            <div class="modal card" style="max-width:420px">
+                <button class="close-modal" onclick="closeProfileModal()">✕</button>
+                <div class="modal-value" style="font-size:2rem;margin-bottom:0.5rem">Profile</div>
+                <div class="profile-modal-body" id="profileModalBody"></div>
+                <div class="flex-row" style="margin-top:1rem">
+                    <input class="input-field" id="newProfileName" placeholder="Profilname…">
+                    <button class="btn btn-sm" onclick="createProfile()">Erstellen</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== TOAST ===== -->
+        <div class="toast-container" id="toastContainer"></div>
+    </body>
+    <script>
+        const POINT_VALUES = [100, 200, 300, 400, 500];
+        const PLAYER_COLORS = ['#FFD700','#4FC3F7','#EF5350','#66BB6A','#AB47BC','#FF7043','#26C6DA','#FFA726'];
+
+        let state = {
+            profiles: {},         // { id: { name, categories: [...] } }
+            activeProfileId: null,
+            players: [],          // [{ name, score, color }]
+            currentCell: null,    // { categoryId, questionId }
+            usedCells: new Set(),
+            answerRevealed: false,
+        };
+
+        // -- Default Template --
+        function defaultProfile(name) {
+            return {
+                name,
+                categories: [
+                {
+                    id: uid(), name: 'Geographie',
+                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, type: 'text', question: '', answer: '' }))
+                },
+                {
+                    id: uid(), name: 'Geschichte',
+                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, type: 'text', question: '', answer: '' }))
+                },
+                {
+                    id: uid(), name: 'Wissenschaft',
+                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, type: 'text', question: '', answer: '' }))
+                },
+                {
+                    id: uid(), name: 'Kultur',
+                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, type: 'text', question: '', answer: '' }))
+                },
+                {
+                    id: uid(), name: 'Sport',
+                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, type: 'text', question: '', answer: '' }))
+                },
+                ]
+            };
+        }
+
+        function uid() { return Math.random().toString(36).slice(2, 9); }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  PERSISTENCE
+        // ════════════════════════════════════════════════════════════════════
+        function saveAll() {
+            try {
+                localStorage.setItem('couchpardy_profiles', JSON.stringify(state.profiles));
+                localStorage.setItem('couchpardy_activeProfile', state.activeProfileId);
+            } catch(e) { 
+                toast('Speichern fehlgeschlagen (LocalStorage voll?)', 'error'); 
+            }
+        }
+
+        function loadAll() {
+            try {
+                const profiles = localStorage.getItem('couchpardy_profiles');
+                const activeProfile = localStorage.getItem('couchpardy_activeProfile');
+                if (profiles) state.profiles = JSON.parse(profiles);
+                if (activeProfile && state.profiles[activeProfile]) state.activeProfileId = activeProfile;
+                if (!Object.keys(state.profiles).length) {
+                    const defaultProfile = defaultProfile('Standard');
+                    const id = uid();
+                    state.profiles[id] = defaultProfile;
+                    state.activeProfileId = id;
+                    saveAll();
+                }
+                if (!state.activeProfileId) {
+                    state.activeProfileId = Object.keys(state.profiles)[0];
+                }
+            } catch(e) {
+                const id = uid();
+                state.profiles[id] = defaultProfile('Standard');
+                state.activeProfileId = id;
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  NAVIGATION
+        // ════════════════════════════════════════════════════════════════════
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if (id === 'screen-settings') renderSettings();
+            if (id === 'screen-start') renderStart();
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  SETTINGS
+        // ════════════════════════════════════════════════════════════════════
+        let activeCategorieId = null;
+
+        function renderSettings() {
+            renderProfileSelector('profileSelect');
+            renderCategoriesList();
+        }
+
+        function renderProfileSelector(selectId) {
+            const selector = document.getElementById(selectId);
+            if (!selector) return;
+            selector.innerHTML = '';
+            Object.entries(state.profiles).forEach(([id, profile]) => {
+                const option = document.createElement('option');
+                option.value = id; option.textContent = profile.name;
+                if (id === state.activeProfileId) option.selected = true;
+                selector.appendChild(option);
+            });
+        }
+
+        function loadProfile(id) {
+            state.activeProfileId = id;
+            activeCategorieId = null;
+            renderCategoriesList();
+            document.getElementById('categoryEditor').innerHTML = '<p class="settings-empty">← Wähle eine Kategorie oder füge eine neue hinzu</p>';
+        }
+
+        function saveCurrentProfile() {
+            saveAll();
+            toast('Profil gespeichert!', 'success');
+        }
+
+        function getActiveProfile() { return state.profiles[state.activeProfileId]; }
+
+        function renderCategoriesList() {
+            const list = document.getElementById('categoriesList');
+            const profile = getActiveProfile();
+            if (!profile) { list.innerHTML = ''; return; }
+            list.innerHTML = '';
+            profile.categories.forEach((category, i) => {
+                const el = document.createElement('div');
+                el.className = 'category-item' + (activeCategorieId === i ? ' active' : '');
+                el.innerHTML = `<span>${category.name || '(Leer)'}</span><button class="btn btn-icon category-delete" onclick="deleteCategory(event,${i})">✕</button>`;
+                el.addEventListener('click', (e) => { if (!e.target.classList.contains('category-delete')) selectCategory(i); });
+                list.appendChild(el);
+            });
+        }
+
+        function selectCategory(categoryId) {
+            activeCategorieId = categoryId;
+            renderCategoriesList();
+            renderCategoryEditor(categoryId);
+        }
+
+        function addCategory() {
+            const inp = document.getElementById('newCatName');
+            const name = inp.value.trim() || 'Neue Kategorie';
+            const profile = getActiveProfile();
+            profile.categories.push({
+                id: uid(),
+                name,
+                questions: POINT_VALUES.map(p => ({ id: uid(), points: p, type: 'text', question: '', answer: '' }))
+            });
+            inp.value = '';
+            saveAll();
+            renderCategoriesList();
+            selectCategory(profile.categories.length - 1);
+        }
+
+        function deleteCategory(e, categoryId) {
+            e.stopPropagation();
+            if (!confirm('Kategorie wirklich löschen?')) return;
+            const profile = getActiveProfile();
+            profile.categories.splice(categoryId, 1);
+            if (activeCategorieId === categoryId) {
+                activeCategorieId = null;
+                document.getElementById('categoryEditor').innerHTML = '<p class="settings-empty">← Wähle eine Kategorie oder füge eine neue hinzu</p>';
+            } else if (activeCategorieId > categoryId) activeCategorieId--;
+            saveAll();
+            renderCategoriesList();
+        }
+
+        function renderCategoryEditor(categoryId) {
+            const profile = getActiveProfile();
+            const cat = profile.categories[categoryId];
+            const editor = document.getElementById('categoryEditor');
+
+            editor.innerHTML = `
+                <div class="category-name-row">
+                <label class="field-label" style="white-space:nowrap">Kategoriename:</label>
+                <input class="input-field" id="catNameInput" value="${escHtml(cat.name)}" oninput="updateCatName(${categoryId},this.value)" placeholder="Kategoriename…">
+                </div>
+                <div class="questions-settings-grid" id="questionsGrid"></div>
+            `;
+
+            const grid = document.getElementById('questionsGrid');
+            cat.questions.forEach((q, qi) => {
+                grid.appendChild(buildQuestionCard(q, categoryId, qi));
+            });
+        }
+
+        function buildQuestionCard(question, categoryId, questionIds) {
+            const card = document.createElement('div');
+            card.className = 'question-settings-card';
+            card.id = `qcard_${question.id}`;
+
+            const isImg = question.type === 'image';
+            const isAImg = question.answerType === 'image';
+
+            card.innerHTML = `
+                <div class="question-settings-card-header">
+                <span class="question-settings-points-badge">💰 ${question.points}</span>
+                <div class="question-settings-tabs">
+                    <button class="question-settings-tab ${!isImg ? 'active' : ''}" onclick="setQType(${categoryId},${questionIds},'text')">Text</button>
+                    <button class="question-settings-tab ${isImg ? 'active' : ''}" onclick="setQType(${categoryId},${questionIds},'image')">Bild</button>
+                </div>
+                </div>
+                <div class="question-settings-content-area" id="qcontent_${question.id}">
+                ${renderQContent(question, categoryId, questionIds)}
+                </div>
+                <label class="field-label" style="margin-top:0.3rem">Antwort:</label>
+                <div class="question-settings-tabs" style="margin-bottom:0.25rem">
+                <button class="question-settings-tab ${!isAImg ? 'active' : ''}" onclick="setAType(${categoryId},${questionIds},'text')">Text</button>
+                <button class="question-settings-tab ${isAImg ? 'active' : ''}" onclick="setAType(${categoryId},${questionIds},'image')">Bild</button>
+                </div>
+                <div class="question-settings-content-area" id="acontent_${question.id}">
+                ${renderAContent(question, categoryId, questionIds)}
+                </div>
+            `;
+            return card;
+        }
+
+        function renderQContent(q, categoryId, questionIds) {
+            if (q.type === 'image') {
+                return `<div class="img-preview-wrap">
+                ${q.question ? `<img class="img-thumb" src="${q.question}">` : ''}
+                <input type="file" accept="image/*" onchange="loadQImage(event,${categoryId},${questionIds})" style="color:rgba(255,255,255,0.6);font-size:0.8rem;max-width:180px">
+                ${q.question ? `<button class="btn btn-sm img-clear" onclick="clearQImage(${categoryId},${questionIds})">✕</button>` : ''}
+                </div>`;
+            }
+            return `<textarea class="input-field" rows="2" placeholder="Frage / Aufgabe…" oninput="updateQ(${categoryId},${questionIds},'question',this.value)">${escHtml(q.question)}</textarea>`;
+        }
+
+        function renderAContent(q, categoryId, questionIds) {
+            if (q.answerType === 'image') {
+                return `<div class="img-preview-wrap">
+                ${q.answer ? `<img class="img-thumb" src="${q.answer}">` : ''}
+                <input type="file" accept="image/*" onchange="loadAImage(event,${categoryId},${questionIds})" style="color:rgba(255,255,255,0.6);font-size:0.8rem;max-width:180px">
+                ${q.answer ? `<button class="btn btn-sm img-clear" onclick="clearAImage(${categoryId},${questionIds})">✕</button>` : ''}
+                </div>`;
+            }
+            return `<input class="input-field" type="text" placeholder="Richtige Antwort…" value="${escHtml(q.answer)}" oninput="updateQ(${categoryId},${questionIds},'answer',this.value)">`;
+        }
+
+        function refreshQCard(categoryId, questionIds) {
+            const profile = getActiveProfile();
+            const q = profile.categories[categoryId].questions[questionIds];
+            const old = document.getElementById(`qcard_${q.id}`);
+            if (!old) return;
+            const newCard = buildQuestionCard(q, categoryId, questionIds);
+            old.replaceWith(newCard);
+        }
+
+        function updateCatName(idx, val) {
+            const profile = getActiveProfile();
+            profile.categories[idx].name = val;
+            renderCategoriesList();
+        }
+
+        function updateQ(categoryId, questionIds, key, val) {
+            const profile = getActiveProfile();
+            profile.categories[categoryId].questions[questionIds][key] = val;
+        }
+
+        function setQType(categoryId, questionIds, type) {
+            const profile = getActiveProfile();
+            profile.categories[categoryId].questions[questionIds].type = type;
+            if (type === 'image') profile.categories[categoryId].questions[questionIds].question = '';
+            refreshQCard(categoryId, questionIds);
+        }
+
+        function setAType(categoryId, questionIds, type) {
+            const profile = getActiveProfile();
+            profile.categories[categoryId].questions[questionIds].answerType = type;
+            if (type === 'image') profile.categories[categoryId].questions[questionIds].answer = '';
+            refreshQCard(categoryId, questionIds);
+        }
+
+        function loadQImage(evt, categoryId, questionIds) {
+            const file = evt.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const profile = getActiveProfile();
+                profile.categories[categoryId].questions[questionIds].question = e.target.result;
+                refreshQCard(categoryId, questionIds);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function loadAImage(evt, categoryId, questionIds) {
+            const file = evt.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const profile = getActiveProfile();
+                profile.categories[categoryId].questions[questionIds].answer = e.target.result;
+                refreshQCard(categoryId, questionIds);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearQImage(categoryId, questionIds) {
+            const profile = getActiveProfile();
+            profile.categories[categoryId].questions[questionIds].question = '';
+            refreshQCard(categoryId, questionIds);
+        }
+
+        function clearAImage(categoryId, questionIds) {
+            const profile = getActiveProfile();
+            profile.categories[categoryId].questions[questionIds].answer = '';
+            refreshQCard(categoryId, questionIds);
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  PROFILE MANAGER
+        // ════════════════════════════════════════════════════════════════════
+        function openProfileManager() {
+            renderProfileManagerModal();
+            document.getElementById('profileModal').classList.add('open');
+        }
+
+        function closeProfileModal() { document.getElementById('profileModal').classList.remove('open'); }
+
+        function renderProfileManagerModal() {
+            const body = document.getElementById('profileModalBody');
+            body.innerHTML = '';
+            Object.entries(state.profiles).forEach(([id, p]) => {
+                const row = document.createElement('div');
+                row.className = 'profile-list-item' + (id === state.activeProfileId ? ' active-profile' : '');
+                row.innerHTML = `
+                <span>${escHtml(p.name)}${id === state.activeProfileId ? ' <span class="text-muted">(aktiv)</span>' : ''}</span>
+                <div class="flex-row">
+                    <button class="btn btn-sm" onclick="selectProfile('${id}')">Wählen</button>
+                    <button class="btn btn-sm" onclick="duplicateProfile('${id}')">Kopie</button>
+                    ${Object.keys(state.profiles).length > 1 ? `<button class="btn btn-sm" onclick="deleteProfile('${id}')">✕</button>` : ''}
+                </div>
+                `;
+                body.appendChild(row);
+            });
+        }
+
+        function createProfile() {
+            const input = document.getElementById('newProfileName');
+            const name = input.value.trim() || 'Neues Profil';
+            const id = uid();
+            state.profiles[id] = defaultProfile(name);
+            state.activeProfileId = id;
+            input.value = '';
+            saveAll();
+            renderProfileManagerModal();
+            renderCategoriesList();
+            renderProfileSelector('profileSelect');
+        }
+
+        function selectProfile(id) {
+            state.activeProfileId = id;
+            activeCategorieId = null;
+            document.getElementById('categoryEditor').innerHTML = '<p class="settings-empty">← Wähle eine Kategorie oder füge eine neue hinzu</p>';
+            saveAll();
+            renderProfileManagerModal();
+            renderCategoriesList();
+            renderProfileSelector('profileSelect');
+            document.getElementById('profileSelect').value = id;
+        }
+
+        function duplicateProfile(id) {
+            const src = state.profiles[id];
+            const newId = uid();
+            state.profiles[newId] = JSON.parse(JSON.stringify(src));
+            state.profiles[newId].name = src.name + ' (Kopie)';
+            // re-gen IDs
+            state.profiles[newId].categories.forEach(cat => {
+                cat.id = uid();
+                cat.questions.forEach(q => q.id = uid());
+            });
+            saveAll();
+            renderProfileManagerModal();
+            renderProfileSelector('profileSelect');
+        }
+
+        function deleteProfile(id) {
+            if (!confirm('Profil wirklich löschen?')) return;
+            delete state.profiles[id];
+            if (state.activeProfileId === id) state.activeProfileId = Object.keys(state.profiles)[0];
+            saveAll();
+            renderProfileManagerModal();
+            renderProfileSelector('profileSelect');
+            renderCategoriesList();
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  START GAME SCREEN
+        // ════════════════════════════════════════════════════════════════════
+        let gamePlayers = []; // temp players for this session
+
+        function renderStart() {
+            renderProfileSelector('startProfileSelect');
+            document.getElementById('startProfileSelect').value = state.activeProfileId;
+            renderPlayersList();
+        }
+
+        function setActiveProfile(id) {
+            state.activeProfileId = id;
+        }
+
+        function addPlayer() {
+            const inp = document.getElementById('newPlayerName');
+            const name = inp.value.trim(); if (!name) return;
+            gamePlayers.push({ name, score: 0, color: PLAYER_COLORS[gamePlayers.length % PLAYER_COLORS.length] });
+            inp.value = '';
+            renderPlayersList();
+        }
+
+        function removePlayer(idx) {
+            gamePlayers.splice(idx, 1);
+            renderPlayersList();
+        }
+
+        function renderPlayersList() {
+            const list = document.getElementById('playersList');
+            list.innerHTML = '';
+            gamePlayers.forEach((p, i) => {
+                const row = document.createElement('div');
+                row.className = 'player-row';
+                row.innerHTML = `
+                <div class="color-dot" style="background:${p.color}"></div>
+                <span style="flex:1;font-weight:600">${escHtml(p.name)}</span>
+                <button class="btn btn-icon" onclick="removePlayer(${i})">✕</button>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  GAME
+        // ════════════════════════════════════════════════════════════════════
+        function startGame() {
+            if (!gamePlayers.length) { 
+                toast('Mindestens 1 Spieler erforderlich!', 'error'); 
+                return; 
+            }
+            const profile = getActiveProfile();
+            if (!profile || !profile.categories.length) { 
+                toast('Keine Kategorien im Profil!', 'error'); 
+                return; 
+            }
+
+            state.players = gamePlayers.map(p => ({ ...p }));
+            state.usedCells = new Set();
+            state.currentCell = null;
+
+            buildBoard();
+            renderPlayersBar();
+            showScreen('screen-game');
+        }
+
+        function buildBoard() {
+        const profile = getActiveProfile();
+        const cats = profile.categories;
+        const board = document.getElementById('gameBoard');
+        board.innerHTML = '';
+        board.style.gridTemplateColumns = `repeat(${cats.length}, 1fr)`;
+        board.style.gridTemplateRows = `auto repeat(${POINT_VALUES.length}, 1fr)`;
+
+        // Header row
+        cats.forEach(cat => {
+            const cell = document.createElement('div');
+            cell.className = 'board-cell header-cell';
+            cell.innerHTML = `<span class="cat-title">${escHtml(cat.name)}</span>`;
+            board.appendChild(cell);
+        });
+
+        // Question rows
+        POINT_VALUES.forEach((pts, qi) => {
+            cats.forEach((cat, ci) => {
+            const cell = document.createElement('div');
+            cell.className = 'board-cell';
+            cell.dataset.ci = ci;
+            cell.dataset.qi = qi;
+            cell.innerHTML = `<span class="cell-value">$${pts}</span>`;
+            cell.addEventListener('click', () => openQuestion(ci, qi));
+            board.appendChild(cell);
+            });
+        });
+        }
+
+        function renderPlayersBar() {
+        const bar = document.getElementById('playersBar');
+        bar.innerHTML = '';
+        state.players.forEach((p, i) => {
+            const card = document.createElement('div');
+            card.className = 'player-score-card';
+            card.id = `pscore_${i}`;
+            card.innerHTML = `
+            <div class="player-score-name" style="color:${p.color}">${escHtml(p.name)}</div>
+            <div class="player-score-val" style="color:${p.color}">${formatScore(p.score)}</div>
+            `;
+            bar.appendChild(card);
+        });
+        }
+
+        function updateScoreCard(idx) {
+        const card = document.getElementById(`pscore_${idx}`);
+        if (!card) return;
+        const p = state.players[idx];
+        card.querySelector('.player-score-val').textContent = formatScore(p.score);
+        }
+
+        function formatScore(s) { return (s < 0 ? '-$' + Math.abs(s) : '$' + s); }
+
+        function openQuestion(ci, qi) {
+            const key = `${ci}_${qi}`;
+            if (state.usedCells.has(key)) return;
+
+            const profile = getActiveProfile();
+            const cat = profile.categories[ci];
+            const q = cat.questions[qi];
+            if (!q) return;
+
+            state.currentCell = { ci, qi, key, points: q.points };
+            state.answerRevealed = false;
+
+            document.getElementById('modalCategory').textContent = cat.name;
+            document.getElementById('modalValue').textContent = `$${q.points}`;
+
+            // Question content
+            const qEl = document.getElementById('modalQuestion');
+            if (q.type === 'image' && q.question) {
+                qEl.innerHTML = `<img src="${q.question}" alt="Frage">`;
+            } else {
+                qEl.textContent = q.question || '(Keine Frage hinterlegt)';
+            }
+
+            // Answer content
+            const aEl = document.getElementById('modalAnswer');
+            if (q.answerType === 'image' && q.answer) {
+                aEl.innerHTML = `<img src="${q.answer}" alt="Antwort">`;
+            } else {
+                aEl.textContent = q.answer || '(Keine Antwort hinterlegt)';
+            }
+
+            document.getElementById('modalAnswerWrap').classList.remove('revealed');
+            document.getElementById('modalScoring').classList.remove('visible');
+            document.getElementById('revealBtn').style.display = '';
+            document.getElementById('modalActions').style.display = 'flex';
+
+            document.getElementById('questionModal').classList.add('open');
+        }
+
+        function revealAnswer() {
+            state.answerRevealed = true;
+            document.getElementById('modalAnswerWrap').classList.add('revealed');
+            document.getElementById('revealBtn').style.display = 'none';
+
+            // Build scoring buttons
+            const scoring = document.getElementById('modalScoring');
+            const players = document.getElementById('scoringPlayers');
+            players.innerHTML = '';
+            state.players.forEach((p, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'scoring-player-btn';
+                btn.innerHTML = `
+                <div class="color-dot" style="background:${p.color};margin:0 auto"></div>
+                <span class="scoring-player-name">${escHtml(p.name)}</span>
+                <span class="scoring-player-score">${formatScore(p.score)}</span>
+                `;
+                btn.addEventListener('click', () => playerCorrect(i));
+                players.appendChild(btn);
+            });
+            scoring.classList.add('visible');
+        }
+
+        function playerCorrect(idx) {
+            const pts = state.currentCell.points;
+            state.players[idx].score += pts;
+            updateScoreCard(idx);
+            markCellUsed();
+            toast(`+$${pts} für ${state.players[idx].name}!`, 'success');
+            closeModal();
+            checkGameEnd();
+        }
+
+        function noOneCorrect() {
+            markCellUsed();
+            closeModal();
+            checkGameEnd();
+        }
+
+        function markCellUsed() {
+            const key = state.currentCell.key;
+            state.usedCells.add(key);
+            const { ci, qi } = state.currentCell;
+            const cell = document.querySelector(`.board-cell[data-ci="${ci}"][data-qi="${qi}"]`);
+            if (cell) cell.classList.add('used');
+        }
+
+        function closeModal() {
+            document.getElementById('questionModal').classList.remove('open');
+        }
+
+        function checkGameEnd() {
+            const profile = getActiveProfile();
+            const total = profile.categories.length * POINT_VALUES.length;
+            if (state.usedCells.size >= total) showWinner();
+        }
+
+        function endGame() {
+            if (confirm('Spiel wirklich beenden?')) showWinner();
+        }
+
+        function showWinner() {
+            closeModal();
+            const sorted = [...state.players].sort((a, b) => b.score - a.score);
+            const winner = sorted[0];
+            document.getElementById('winnerName').textContent = winner.name;
+            const fs = document.getElementById('finalScores');
+            fs.innerHTML = '';
+            sorted.forEach((p, i) => {
+                const row = document.createElement('div');
+                row.className = 'final-score-row' + (i === 0 ? ' winner-row' : '');
+                row.innerHTML = `
+                <span class="final-rank">${['🥇','🥈','🥉','4.','5.','6.','7.','8.'][i] || (i+1)+'.'}</span>
+                <span class="final-name" style="color:${p.color}">${escHtml(p.name)}</span>
+                <span class="final-pts">${formatScore(p.score)}</span>
+                `;
+                fs.appendChild(row);
+            });
+            showScreen('screen-winner');
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  UTILITIES
+        // ════════════════════════════════════════════════════════════════════
+        function escHtml(str) {
+            return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function toast(msg, type = '') {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = 'toast' + (type ? ' ' + type : '');
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  INIT
+        // ════════════════════════════════════════════════════════════════════
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAll();
+        });
+    </script>
+</html>
+

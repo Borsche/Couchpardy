@@ -52,7 +52,7 @@
             padding: 2rem;
         }
 
-        .screen.center {
+        .center {
             align-items: center;
             justify-content: center;
         }
@@ -110,7 +110,6 @@
             cursor: pointer;
             transition: all 0.18s;
             position: relative;
-            overflow: hidden;
         }
         .btn::after {
             content: '';
@@ -173,7 +172,6 @@
             display: flex;
             gap: 1.5rem;
             flex: 1;
-            overflow: hidden;
         }
         .categories-list {
             width: 220px;
@@ -233,6 +231,20 @@
             background: var(--tenth-purple-light);
         }
         .input-field::placeholder { color: var(--half-white); }
+
+        .input-color {
+            height: 0;
+            width: 0;
+            padding: 0;
+            border: none;
+        } 
+
+        .input-color-label {
+            border: 1px solid var(--half-purple-light);
+            border-radius: var(--radius);
+            width: 4.8rem;
+            height: 2.4rem;
+        }
 
         .questions-settings-grid {
             display: grid;
@@ -484,7 +496,6 @@
 
         .board-wrap {
             flex: 1;
-            overflow: hidden;
             padding: 0.5rem;
             display: flex;
             flex-direction: column;
@@ -506,7 +517,6 @@
             cursor: pointer;
             transition: all 0.15s;
             position: relative;
-            overflow: hidden;
         }
         .board-cell:hover:not(.used):not(.header-cell) {
             border-color: var(--white);
@@ -629,6 +639,50 @@
             color: var(--white); 
         }
 
+        /* -- SPECIALS MODAL -- */
+        .specials-modal-body { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 0.75rem; 
+            margin-top: 1rem;
+        }
+
+        .special-list-item {
+            display: flex; 
+            background: var(--quarter-purple-mid);
+            border: 1px solid var(--half-purple-light);
+            border-radius: 6px; padding: 0.6rem 1rem;
+        }
+
+        .specials-list-item > span {
+            flex-grow: 1
+        }
+
+        #specialQuestionModal .modal {
+            background: linear-gradient(135deg, transparent 0%, var(--purple-dark) 100%);
+        }
+
+        .special-name {
+            font-size: 4rem;
+            font-weight: 600;
+            font-family: 'Barlow', sans-serif;
+            text-shadow: 0 0 25px var(--white);
+            text-align: center;
+            padding: 2rem;
+            animation: bounce 1s 2 alternate;
+            color: var(--off-white);
+        }
+
+        @keyframes gradientMove {
+            0% {
+                background-position: 100% 100%;
+            }
+
+            100% {
+                background-position: 0% 0%;
+            }
+        }
+
         /* ── TOAST ── */
         .toast-container { 
             position: fixed;
@@ -695,6 +749,7 @@
                     <label class="field-label" style="white-space:nowrap">Profil:</label>
                     <select class="profile-select" id="profileSelect" onchange="loadProfile(this.value)"></select>
                     <button class="btn btn-sm" onclick="openProfileManager()">Profile</button>
+                    <button class="btn btn-sm" onclick="openSpecialsManager()">Specials</button>
                     <button class="btn btn-sm" onclick="saveCurrentProfile()">Speichern</button>
                     <button class="btn btn-sm" onclick="showScreen('screen-menu')">< Zurück</button>
                 </div>
@@ -788,6 +843,17 @@
             </div>
         </div>
 
+        <!-- ===== SPECIAL QUESTION MODAL ===== -->
+        <div class="modal-overlay" id="specialQuestionModal">
+            <div class="modal card" id="specialQuestionModalCard">
+                <button class="close-modal" onclick="closeSpecialModal()">✕</button>
+                <div class="special-name" id="specialQuestionModalName">SPECIAL</div>
+                <div class="flex-row center">
+                    <button class="btn" onclick="openActiveQuestion()">Weiter</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ===== PROFILE MANAGER MODAL ===== -->
         <div class="modal-overlay" id="profileModal">
             <div class="modal card" style="max-width:420px">
@@ -801,12 +867,31 @@
             </div>
         </div>
 
+        <!-- ===== SPECIALS MANAGER MODAL ===== -->
+        <div class="modal-overlay" id="specialsModal">
+            <div class="modal card" style="max-width:420px">
+                <button class="close-modal" onclick="closeSpecialsManagerModal()">✕</button>
+                <div class="modal-value" style="font-size:2rem;margin-bottom:0.5rem">Specials</div>
+                <div class="specials-modal-body" id="specialsModalBody"></div>
+                <div class="flex-row" style="margin-top:1rem">
+                    <input class="input-field" id="newSpecialName" placeholder="Anzeigename...">
+                    <label class="input-color-label" for="newSpecialColor" style="background-color: #000000;"></label>
+                    <input class="input-color" id="newSpecialColor" oninput="updateSpecialLabelColor(this)" type="color">
+                    <button class="btn btn-sm" onclick="createSpecial()">Erstellen</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ===== TOAST ===== -->
         <div class="toast-container" id="toastContainer"></div>
     </body>
     <script>
-        const POINT_VALUES = [100, 200, 300, 400, 500];
+        const POINT_VALUES = [20, 50, 100, 200, 400];
         const PLAYER_COLORS = ['#FFD700','#4FC3F7','#EF5350','#66BB6A','#AB47BC','#FF7043','#26C6DA','#FFA726'];
+        const DEFAULT_SPECIAL = {
+            color: '#14eb18',
+            name: 'Special'
+        }
 
         let state = {
             profiles: {},         // { id: { name, categories: [...] } }
@@ -815,6 +900,7 @@
             currentCell: null,    // { categoryId, questionId }
             usedCells: new Set(),
             answerRevealed: false,
+            specials: {}          // { id: { name, color }}
         };
 
         // -- Default Template --
@@ -855,6 +941,7 @@
             try {
                 localStorage.setItem('couchpardy_profiles', JSON.stringify(state.profiles));
                 localStorage.setItem('couchpardy_activeProfile', state.activeProfileId);
+                localStorage.setItem('couchpardy_specials', JSON.stringify(state.specials));
             } catch(e) { 
                 toast('Speichern fehlgeschlagen (LocalStorage voll?)', 'error'); 
             }
@@ -864,8 +951,10 @@
             try {
                 const profiles = localStorage.getItem('couchpardy_profiles');
                 const activeProfile = localStorage.getItem('couchpardy_activeProfile');
+                const specials = localStorage.getItem('couchpardy_specials');
                 if (profiles) state.profiles = JSON.parse(profiles);
                 if (activeProfile && state.profiles[activeProfile]) state.activeProfileId = activeProfile;
+                if (specials) state.specials = JSON.parse(specials);
                 if (!Object.keys(state.profiles).length) {
                     const defaultProfile = defaultProfile('Standard');
                     const id = uid();
@@ -876,10 +965,17 @@
                 if (!state.activeProfileId) {
                     state.activeProfileId = Object.keys(state.profiles)[0];
                 }
+                if (!Object.keys(state.specials).length) {
+                    const id = uid();
+                    state.specials[id] = DEFAULT_SPECIAL;
+                    saveAll();
+                }
             } catch(e) {
-                const id = uid();
-                state.profiles[id] = defaultProfile('Standard');
-                state.activeProfileId = id;
+                const profileId = uid();
+                state.profiles[profileId] = defaultProfile('Standard');
+                state.activeProfileId = profileId;
+                const specialId = uid();
+                state.specials[id] = DEFAULT_SPECIAL;
             }
         }
 
@@ -931,9 +1027,9 @@
 
         function renderCategoriesList() {
             const list = document.getElementById('categoriesList');
-            const profile = getActiveProfile();
-            if (!profile) { list.innerHTML = ''; return; }
             list.innerHTML = '';
+            const profile = getActiveProfile();
+            if (!profile) { return; }
             profile.categories.forEach((category, i) => {
                 const el = document.createElement('div');
                 el.className = 'category-item' + (activeCategorieId === i ? ' active' : '');
@@ -991,12 +1087,12 @@
             `;
 
             const grid = document.getElementById('questionsGrid');
-            cat.questions.forEach((q, qi) => {
-                grid.appendChild(buildQuestionCard(q, categoryId, qi));
+            cat.questions.forEach((q, questionId) => {
+                grid.appendChild(buildQuestionCard(q, categoryId, questionId));
             });
         }
 
-        function buildQuestionCard(question, categoryId, questionIds) {
+        function buildQuestionCard(question, categoryId, questionId) {
             const card = document.createElement('div');
             card.className = 'question-settings-card';
             card.id = `qcard_${question.id}`;
@@ -1006,55 +1102,64 @@
 
             card.innerHTML = `
                 <div class="question-settings-card-header">
-                <span class="question-settings-points-badge">💰 ${question.points}</span>
+                    <div class="flex-row" style="gap: 2rem">
+                        <span class="question-settings-points-badge">${question.points}</span>
+                        <div>
+                            <label class="field-label">Special:</label>
+                            <select class="profile-select ${question.special == null ? 'text-muted': ''}" onchange="setQuestionSpecial(${categoryId},${questionId},this.value)">
+                                <option class="text-muted" value="">Kein Special</option>
+                                ${Object.keys(state.specials).map((id) => `<option value="${id}" ${question.special === id ? 'selected': ''}>${state.specials[id].name}</option>`)}    
+                            </select>
+                        </div>
+                    </div>
                 <div class="question-settings-tabs">
-                    <button class="question-settings-tab ${!isImg ? 'active' : ''}" onclick="setQType(${categoryId},${questionIds},'text')">Text</button>
-                    <button class="question-settings-tab ${isImg ? 'active' : ''}" onclick="setQType(${categoryId},${questionIds},'image')">Bild</button>
+                    <button class="question-settings-tab ${!isImg ? 'active' : ''}" onclick="setQType(${categoryId},${questionId},'text')">Text</button>
+                    <button class="question-settings-tab ${isImg ? 'active' : ''}" onclick="setQType(${categoryId},${questionId},'image')">Bild</button>
                 </div>
                 </div>
                 <div class="question-settings-content-area" id="qcontent_${question.id}">
-                ${renderQContent(question, categoryId, questionIds)}
+                ${renderQContent(question, categoryId, questionId)}
                 </div>
                 <label class="field-label" style="margin-top:0.3rem">Antwort:</label>
                 <div class="question-settings-tabs" style="margin-bottom:0.25rem">
-                <button class="question-settings-tab ${!isAImg ? 'active' : ''}" onclick="setAType(${categoryId},${questionIds},'text')">Text</button>
-                <button class="question-settings-tab ${isAImg ? 'active' : ''}" onclick="setAType(${categoryId},${questionIds},'image')">Bild</button>
+                <button class="question-settings-tab ${!isAImg ? 'active' : ''}" onclick="setAType(${categoryId},${questionId},'text')">Text</button>
+                <button class="question-settings-tab ${isAImg ? 'active' : ''}" onclick="setAType(${categoryId},${questionId},'image')">Bild</button>
                 </div>
                 <div class="question-settings-content-area" id="acontent_${question.id}">
-                ${renderAContent(question, categoryId, questionIds)}
+                ${renderAContent(question, categoryId, questionId)}
                 </div>
             `;
             return card;
         }
 
-        function renderQContent(q, categoryId, questionIds) {
+        function renderQContent(q, categoryId, questionId) {
             if (q.type === 'image') {
                 return `<div class="img-preview-wrap">
                 ${q.question ? `<img class="img-thumb" src="${q.question}">` : ''}
-                <input type="file" accept="image/*" onchange="loadQImage(event,${categoryId},${questionIds})" style="color:rgba(255,255,255,0.6);font-size:0.8rem;max-width:180px">
-                ${q.question ? `<button class="btn btn-sm img-clear" onclick="clearQImage(${categoryId},${questionIds})">✕</button>` : ''}
+                <input type="file" accept="image/*" onchange="loadQImage(event,${categoryId},${questionId})" style="color:rgba(255,255,255,0.6);font-size:0.8rem;max-width:180px">
+                ${q.question ? `<button class="btn btn-sm img-clear" onclick="clearQImage(${categoryId},${questionId})">✕</button>` : ''}
                 </div>`;
             }
-            return `<textarea class="input-field" rows="2" placeholder="Frage / Aufgabe…" oninput="updateQ(${categoryId},${questionIds},'question',this.value)">${escHtml(q.question)}</textarea>`;
+            return `<textarea class="input-field" rows="2" placeholder="Frage / Aufgabe…" oninput="updateQ(${categoryId},${questionId},'question',this.value)">${escHtml(q.question)}</textarea>`;
         }
 
-        function renderAContent(q, categoryId, questionIds) {
+        function renderAContent(q, categoryId, questionId) {
             if (q.answerType === 'image') {
                 return `<div class="img-preview-wrap">
                 ${q.answer ? `<img class="img-thumb" src="${q.answer}">` : ''}
-                <input type="file" accept="image/*" onchange="loadAImage(event,${categoryId},${questionIds})" style="color:rgba(255,255,255,0.6);font-size:0.8rem;max-width:180px">
-                ${q.answer ? `<button class="btn btn-sm img-clear" onclick="clearAImage(${categoryId},${questionIds})">✕</button>` : ''}
+                <input type="file" accept="image/*" onchange="loadAImage(event,${categoryId},${questionId})" style="color:rgba(255,255,255,0.6);font-size:0.8rem;max-width:180px">
+                ${q.answer ? `<button class="btn btn-sm img-clear" onclick="clearAImage(${categoryId},${questionId})">✕</button>` : ''}
                 </div>`;
             }
-            return `<input class="input-field" type="text" placeholder="Richtige Antwort…" value="${escHtml(q.answer)}" oninput="updateQ(${categoryId},${questionIds},'answer',this.value)">`;
+            return `<input class="input-field" type="text" placeholder="Richtige Antwort…" value="${escHtml(q.answer)}" oninput="updateQ(${categoryId},${questionId},'answer',this.value)">`;
         }
 
-        function refreshQCard(categoryId, questionIds) {
+        function refreshQCard(categoryId, questionId) {
             const profile = getActiveProfile();
-            const q = profile.categories[categoryId].questions[questionIds];
+            const q = profile.categories[categoryId].questions[questionId];
             const old = document.getElementById(`qcard_${q.id}`);
             if (!old) return;
-            const newCard = buildQuestionCard(q, categoryId, questionIds);
+            const newCard = buildQuestionCard(q, categoryId, questionId);
             old.replaceWith(newCard);
         }
 
@@ -1064,57 +1169,63 @@
             renderCategoriesList();
         }
 
-        function updateQ(categoryId, questionIds, key, val) {
+        function updateQ(categoryId, questionId, key, val) {
             const profile = getActiveProfile();
-            profile.categories[categoryId].questions[questionIds][key] = val;
+            profile.categories[categoryId].questions[questionId][key] = val;
         }
 
-        function setQType(categoryId, questionIds, type) {
+        function setQuestionSpecial(categoryId, questionId, special) {
             const profile = getActiveProfile();
-            profile.categories[categoryId].questions[questionIds].type = type;
-            if (type === 'image') profile.categories[categoryId].questions[questionIds].question = '';
-            refreshQCard(categoryId, questionIds);
+            profile.categories[categoryId].questions[questionId].special = special;
+            refreshQCard(categoryId, questionId);
         }
 
-        function setAType(categoryId, questionIds, type) {
+        function setQType(categoryId, questionId, type) {
             const profile = getActiveProfile();
-            profile.categories[categoryId].questions[questionIds].answerType = type;
-            if (type === 'image') profile.categories[categoryId].questions[questionIds].answer = '';
-            refreshQCard(categoryId, questionIds);
+            profile.categories[categoryId].questions[questionId].type = type;
+            if (type === 'image') profile.categories[categoryId].questions[questionId].question = '';
+            refreshQCard(categoryId, questionId);
         }
 
-        function loadQImage(evt, categoryId, questionIds) {
+        function setAType(categoryId, questionId, type) {
+            const profile = getActiveProfile();
+            profile.categories[categoryId].questions[questionId].answerType = type;
+            if (type === 'image') profile.categories[categoryId].questions[questionId].answer = '';
+            refreshQCard(categoryId, questionId);
+        }
+
+        function loadQImage(evt, categoryId, questionId) {
             const file = evt.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = e => {
                 const profile = getActiveProfile();
-                profile.categories[categoryId].questions[questionIds].question = e.target.result;
-                refreshQCard(categoryId, questionIds);
+                profile.categories[categoryId].questions[questionId].question = e.target.result;
+                refreshQCard(categoryId, questionId);
             };
             reader.readAsDataURL(file);
         }
 
-        function loadAImage(evt, categoryId, questionIds) {
+        function loadAImage(evt, categoryId, questionId) {
             const file = evt.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = e => {
                 const profile = getActiveProfile();
-                profile.categories[categoryId].questions[questionIds].answer = e.target.result;
-                refreshQCard(categoryId, questionIds);
+                profile.categories[categoryId].questions[questionId].answer = e.target.result;
+                refreshQCard(categoryId, questionId);
             };
             reader.readAsDataURL(file);
         }
 
-        function clearQImage(categoryId, questionIds) {
+        function clearQImage(categoryId, questionId) {
             const profile = getActiveProfile();
-            profile.categories[categoryId].questions[questionIds].question = '';
-            refreshQCard(categoryId, questionIds);
+            profile.categories[categoryId].questions[questionId].question = '';
+            refreshQCard(categoryId, questionId);
         }
 
-        function clearAImage(categoryId, questionIds) {
+        function clearAImage(categoryId, questionId) {
             const profile = getActiveProfile();
-            profile.categories[categoryId].questions[questionIds].answer = '';
-            refreshQCard(categoryId, questionIds);
+            profile.categories[categoryId].questions[questionId].answer = '';
+            refreshQCard(categoryId, questionId);
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -1192,6 +1303,57 @@
             renderProfileManagerModal();
             renderProfileSelector('profileSelect');
             renderCategoriesList();
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  SPECIALS MANAGER
+        // ════════════════════════════════════════════════════════════════════
+        function openSpecialsManager() {
+            renderSpecialsManagerModal();
+            document.getElementById('specialsModal').classList.add('open');
+        }
+
+        function closeSpecialsManagerModal() { 
+            document.getElementById('specialsModal').classList.remove('open'); 
+        }
+
+        function renderSpecialsManagerModal() {
+            const body = document.getElementById('specialsModalBody');
+            body.innerHTML = '';
+            Object.entries(state.specials).forEach(([id, special]) => {
+                const row = document.createElement('div');
+                row.className = 'special-list-item flex-row';
+                row.innerHTML = `
+                    <span style="flex-grow: 1">${escHtml(special.name)}</span>
+                    <div class="input-color-label" style="background-color: ${special.color}; width: 2.4rem"></div>
+                    ${Object.keys(state.specials).length > 1 ? `<button class="btn btn-sm" onclick="deleteSpecial('${id}')">✕</button>` : ''}
+                `;
+                body.appendChild(row);
+            });
+        }
+
+        function createSpecial() {
+            const nameInput = document.getElementById('newSpecialName');
+            const name = nameInput.value.trim() || 'Neues Profil';
+
+            const colorInput = document.getElementById('newSpecialColor');
+            const color = colorInput.value || DEFAULT_SPECIAL.color;
+
+            const id = uid();
+            state.specials[id] = {
+                color,
+                name
+            };
+
+            nameInput.value = '';
+            colorInput.value = '#000000';
+            saveAll();
+            renderSpecialsManagerModal();
+        }
+
+        function updateSpecialLabelColor(input) {
+            const label = document.querySelector(`label[for="${input.id}"]`);
+            label.style.backgroundColor = input.value
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -1277,14 +1439,14 @@
         });
 
         // Question rows
-        POINT_VALUES.forEach((pts, qi) => {
-            cats.forEach((cat, ci) => {
+        POINT_VALUES.forEach((pts, questionId) => {
+            cats.forEach((cat, categoryId) => {
             const cell = document.createElement('div');
             cell.className = 'board-cell';
-            cell.dataset.ci = ci;
-            cell.dataset.qi = qi;
-            cell.innerHTML = `<span class="cell-value">$${pts}</span>`;
-            cell.addEventListener('click', () => openQuestion(ci, qi));
+            cell.dataset.categoryId = categoryId;
+            cell.dataset.questionId = questionId;
+            cell.innerHTML = `<span class="cell-value">${pts}</span>`;
+            cell.addEventListener('click', () => openQuestion(categoryId, questionId));
             board.appendChild(cell);
             });
         });
@@ -1312,37 +1474,76 @@
         card.querySelector('.player-score-val').textContent = formatScore(p.score);
         }
 
-        function formatScore(s) { return (s < 0 ? '-$' + Math.abs(s) : '$' + s); }
+        function formatScore(s) { return (s < 0 ? '-' + Math.abs(s) : s.toString()); }
 
-        function openQuestion(ci, qi) {
-            const key = `${ci}_${qi}`;
+        function openQuestionSpecialModal(categoryId, questionId, question) {
+            const special = state.specials[question.special]
+
+            if (!special) {
+                return;
+            }
+
+            const specialModal = document.getElementById('specialQuestionModal');
+            const specialQuestionModalCard = document.getElementById('specialQuestionModalCard');
+            const specialQuestionModalName = document.getElementById('specialQuestionModalName');
+
+
+            specialQuestionModalCard.style.backgroundColor = special.color;
+            specialQuestionModalName.innerHTML = escHtml(special.name)
+
+            specialModal.classList.add('open')
+        }
+
+        function openActiveQuestion() {
+            closeSpecialModal();
+
+            const { questionId, categoryId } = state.currentCell;
+
+            const profile = getActiveProfile();
+            const category = profile.categories[categoryId];
+            const question = category.questions[questionId];
+
+            openQuestionModal(categoryId, questionId, category, question);
+        }
+
+        function openQuestion(categoryId, questionId) {
+            const key = `${categoryId}_${questionId}`;
             if (state.usedCells.has(key)) return;
 
             const profile = getActiveProfile();
-            const cat = profile.categories[ci];
-            const q = cat.questions[qi];
-            if (!q) return;
+            const category = profile.categories[categoryId];
+            const question = category.questions[questionId];
+            if (!question) return;
 
-            state.currentCell = { ci, qi, key, points: q.points };
+            state.currentCell = { categoryId, questionId, key, points: question.points };
             state.answerRevealed = false;
 
-            document.getElementById('modalCategory').textContent = cat.name;
-            document.getElementById('modalValue').textContent = `$${q.points}`;
+            if (question.special) {
+                openQuestionSpecialModal(categoryId, questionId, question);
+                return;
+            }
+
+            openQuestionModal(categoryId, questionId, category, question);
+        }
+
+        function openQuestionModal(categoryId, questionId, category, question) {
+            document.getElementById('modalCategory').textContent = category.name;
+            document.getElementById('modalValue').textContent = `${question.points}`;
 
             // Question content
             const qEl = document.getElementById('modalQuestion');
-            if (q.type === 'image' && q.question) {
-                qEl.innerHTML = `<img src="${q.question}" alt="Frage">`;
+            if (question.type === 'image' && question.question) {
+                qEl.innerHTML = `<img src="${question.question}" alt="Frage">`;
             } else {
-                qEl.textContent = q.question || '(Keine Frage hinterlegt)';
+                qEl.textContent = question.question || '(Keine Frage hinterlegt)';
             }
 
             // Answer content
             const aEl = document.getElementById('modalAnswer');
-            if (q.answerType === 'image' && q.answer) {
-                aEl.innerHTML = `<img src="${q.answer}" alt="Antwort">`;
+            if (question.answerType === 'image' && question.answer) {
+                aEl.innerHTML = `<img src="${question.answer}" alt="Antwort">`;
             } else {
-                aEl.textContent = q.answer || '(Keine Antwort hinterlegt)';
+                aEl.textContent = question.answer || '(Keine Antwort hinterlegt)';
             }
 
             document.getElementById('modalAnswerWrap').classList.remove('revealed');
@@ -1381,7 +1582,7 @@
             state.players[idx].score += pts;
             updateScoreCard(idx);
             markCellUsed();
-            toast(`+$${pts} für ${state.players[idx].name}!`, 'success');
+            toast(`+${pts} für ${state.players[idx].name}!`, 'success');
             closeModal();
             checkGameEnd();
         }
@@ -1395,13 +1596,17 @@
         function markCellUsed() {
             const key = state.currentCell.key;
             state.usedCells.add(key);
-            const { ci, qi } = state.currentCell;
-            const cell = document.querySelector(`.board-cell[data-ci="${ci}"][data-qi="${qi}"]`);
+            const { categoryId, questionId } = state.currentCell;
+            const cell = document.querySelector(`.board-cell[data-category-id="${categoryId}"][data-question-id="${questionId}"]`);
             if (cell) cell.classList.add('used');
         }
 
         function closeModal() {
             document.getElementById('questionModal').classList.remove('open');
+        }
+
+        function closeSpecialModal() {
+            document.getElementById('specialQuestionModal').classList.remove('open');
         }
 
         function checkGameEnd() {

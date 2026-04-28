@@ -910,23 +910,23 @@
                 categories: [
                 {
                     id: uid(), name: 'Geographie',
-                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, type: 'text', question: '', answer: '' }))
+                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, displayPoints: p, type: 'text', question: '', answer: '' }))
                 },
                 {
                     id: uid(), name: 'Geschichte',
-                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, type: 'text', question: '', answer: '' }))
+                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, displayPoints: p, type: 'text', question: '', answer: '' }))
                 },
                 {
                     id: uid(), name: 'Wissenschaft',
-                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, type: 'text', question: '', answer: '' }))
+                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, displayPoints: p, type: 'text', question: '', answer: '' }))
                 },
                 {
                     id: uid(), name: 'Kultur',
-                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, type: 'text', question: '', answer: '' }))
+                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, displayPoints: p, type: 'text', question: '', answer: '' }))
                 },
                 {
                     id: uid(), name: 'Sport',
-                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, type: 'text', question: '', answer: '' }))
+                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, displayPoints: p, type: 'text', question: '', answer: '' }))
                 },
                 ]
             };
@@ -1103,7 +1103,11 @@
             card.innerHTML = `
                 <div class="question-settings-card-header">
                     <div class="flex-row" style="gap: 2rem">
-                        <span class="question-settings-points-badge">${question.points}</span>
+                        <span class="question-settings-points-badge">${question.displayPoints}</span>
+                        <div class="flex-row">
+                            <label class="field-label">Punktewert:</label>
+                            <input class="input-field" style="width: 4rem" oninput="updateQuestionPoints(${categoryId},${questionId},this.value)" value="${question.points}"/>
+                        </div>
                         <div>
                             <label class="field-label">Special:</label>
                             <select class="profile-select ${question.special == null ? 'text-muted': ''}" onchange="setQuestionSpecial(${categoryId},${questionId},this.value)">
@@ -1167,6 +1171,16 @@
             const profile = getActiveProfile();
             profile.categories[idx].name = val;
             renderCategoriesList();
+        }
+
+        function updateQuestionPoints(categoryId, questionId, value) {
+            const number = parseInt(value);
+            if (isNaN(number)) {
+                return;
+            }
+
+            const profile = getActiveProfile();
+            profile.categories[categoryId].questions[questionId].points = number;
         }
 
         function updateQ(categoryId, questionId, key, val) {

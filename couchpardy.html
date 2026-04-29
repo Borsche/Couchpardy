@@ -575,11 +575,11 @@
             text-align: center;
             min-width: 110px;
             transition: all 0.2s;
+            position: relative;
         }
         .player-score-name {
             font-family: 'Barlow Condensed', sans-serif;
             font-size: 0.85rem;
-            color: var(--off-white);
             text-transform: uppercase;
             letter-spacing: 0.1em;
             white-space: nowrap;
@@ -589,6 +589,30 @@
             font-size: 1.5rem;
             letter-spacing: 0.05em;
             line-height: 1.1;
+        }
+        .player-score-edit-btn {
+            display: none;
+            color: inherit;
+            font-size: larger;
+            font-weight: bolder;
+            border: none;
+            background: transparent;
+            position: absolute;
+            top: 0;
+            right: 0;
+            translate: -50%;
+        }
+        .player-score-edit-btn:hover {
+            color: var(--purple-light)
+        }
+        .player-score-card:hover .player-score-edit-btn {
+            display: block;
+        }
+
+        .player-score-edit-input-field {
+            width: 4rem;
+            padding: .1rem .3rem;
+            justify-self: center;
         }
 
         /* ── WINNER SCREEN ── */
@@ -1437,55 +1461,91 @@
         }
 
         function buildBoard() {
-        const profile = getActiveProfile();
-        const cats = profile.categories;
-        const board = document.getElementById('gameBoard');
-        board.innerHTML = '';
-        board.style.gridTemplateColumns = `repeat(${cats.length}, 1fr)`;
-        board.style.gridTemplateRows = `auto repeat(${POINT_VALUES.length}, 1fr)`;
+            const profile = getActiveProfile();
+            const cats = profile.categories;
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
+            board.style.gridTemplateColumns = `repeat(${cats.length}, 1fr)`;
+            board.style.gridTemplateRows = `auto repeat(${POINT_VALUES.length}, 1fr)`;
 
-        // Header row
-        cats.forEach(cat => {
-            const cell = document.createElement('div');
-            cell.className = 'board-cell header-cell';
-            cell.innerHTML = `<span class="cat-title">${escHtml(cat.name)}</span>`;
-            board.appendChild(cell);
-        });
-
-        // Question rows
-        POINT_VALUES.forEach((pts, questionId) => {
-            cats.forEach((cat, categoryId) => {
-            const cell = document.createElement('div');
-            cell.className = 'board-cell';
-            cell.dataset.categoryId = categoryId;
-            cell.dataset.questionId = questionId;
-            cell.innerHTML = `<span class="cell-value">${pts}</span>`;
-            cell.addEventListener('click', () => openQuestion(categoryId, questionId));
-            board.appendChild(cell);
+            // Header row
+            cats.forEach(cat => {
+                const cell = document.createElement('div');
+                cell.className = 'board-cell header-cell';
+                cell.innerHTML = `<span class="cat-title">${escHtml(cat.name)}</span>`;
+                board.appendChild(cell);
             });
-        });
+
+            // Question rows
+            POINT_VALUES.forEach((pts, questionId) => {
+                cats.forEach((cat, categoryId) => {
+                const cell = document.createElement('div');
+                cell.className = 'board-cell';
+                cell.dataset.categoryId = categoryId;
+                cell.dataset.questionId = questionId;
+                cell.innerHTML = `<span class="cell-value">${pts}</span>`;
+                cell.addEventListener('click', () => openQuestion(categoryId, questionId));
+                board.appendChild(cell);
+                });
+            });
         }
 
         function renderPlayersBar() {
-        const bar = document.getElementById('playersBar');
-        bar.innerHTML = '';
-        state.players.forEach((p, i) => {
-            const card = document.createElement('div');
-            card.className = 'player-score-card';
-            card.id = `pscore_${i}`;
-            card.innerHTML = `
-            <div class="player-score-name" style="color:${p.color}">${escHtml(p.name)}</div>
-            <div class="player-score-val" style="color:${p.color}">${formatScore(p.score)}</div>
-            `;
-            bar.appendChild(card);
-        });
+            const bar = document.getElementById('playersBar');
+            bar.innerHTML = '';
+            state.players.forEach((player, index) => {
+                const card = document.createElement('div');
+                card.className = 'player-score-card';
+                card.id = `pscore_${index}`;
+                card.style.color = player.color
+                card.innerHTML = `
+                    <button class="player-score-edit-btn" onclick="togglePlayerScoreEdit(${index})" id="player-score-edit-btn">⚙</button>
+                    <button class="player-score-edit-btn" style="display: none" onclick="setPlayerScore(${index})" id="player-score-edit-accept-btn">✓</button>
+                    <div class="player-score-name">${escHtml(player.name)}</div>
+                    <div class="player-score-val">${formatScore(player.score)}</div>
+                    <input class="input-field player-score-edit-input-field" id="player-score-edit-input" style="display: none" value="${formatScore(player.score)}"/>
+                `;
+                bar.appendChild(card);
+            });
         }
 
-        function updateScoreCard(idx) {
-        const card = document.getElementById(`pscore_${idx}`);
-        if (!card) return;
-        const p = state.players[idx];
-        card.querySelector('.player-score-val').textContent = formatScore(p.score);
+        function togglePlayerScoreEdit(playerId) {
+            const card = document.getElementById(`pscore_${playerId}`);
+            if (!card) return;
+            card.querySelector('.player-score-val').style.display = 'none';
+            card.querySelector('#player-score-edit-btn').style.display = 'none';
+            card.querySelector('#player-score-edit-accept-btn').style.display = '';
+            card.querySelector('#player-score-edit-input').style.display = 'block';
+        }
+
+        function setPlayerScore(playerId) {
+            const card = document.getElementById(`pscore_${playerId}`);
+            if (!card) return;
+            card.querySelector('.player-score-val').style.display = 'block';
+            card.querySelector('#player-score-edit-btn').style.display = '';
+            card.querySelector('#player-score-edit-accept-btn').style.display = 'none';
+            
+            const input = card.querySelector('#player-score-edit-input')
+            if (!input) return;
+
+            input.style.display = 'none';
+
+            console.log(input);
+            console.log(input.value);
+
+            const number = parseInt(input.value);
+            if (isNaN(number)) return;
+
+            state.players[playerId].score = number;
+            updateScoreCard(playerId); 
+        }
+
+        function updateScoreCard(playerId) {
+            const card = document.getElementById(`pscore_${playerId}`);
+            if (!card) return;
+            const p = state.players[playerId];
+            card.querySelector('.player-score-val').textContent = formatScore(p.score);
+            card.querySelector('#player-score-edit-input').value = formatScore(p.score);
         }
 
         function formatScore(s) { return (s < 0 ? '-' + Math.abs(s) : s.toString()); }

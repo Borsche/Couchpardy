@@ -110,6 +110,8 @@
             cursor: pointer;
             transition: all 0.18s;
             position: relative;
+            background: var(--white);
+            color: var(--purple-dark);
         }
         .btn::after {
             content: '';
@@ -887,6 +889,8 @@
                 <div class="flex-row" style="margin-top:1rem">
                     <input class="input-field" id="newProfileName" placeholder="Profilname…">
                     <button class="btn btn-sm" onclick="createProfile()">Erstellen</button>
+                    <label for="upload-profile" class="btn btn-sm btn-fake">↥</label>
+                    <input id="upload-profile" type="file" style="display: none" accept="text/json" onchange="uploadProfile(this)">
                 </div>
             </div>
         </div>
@@ -934,23 +938,23 @@
                 categories: [
                 {
                     id: uid(), name: 'Geographie',
-                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, displayPoints: p, type: 'text', question: '', answer: '' }))
+                    questions: POINT_VALUES.map((p, i) => ({ id: uid(), points: p, pointValuesIndex: i, type: 'text', question: '', answer: '' }))
                 },
                 {
                     id: uid(), name: 'Geschichte',
-                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, displayPoints: p, type: 'text', question: '', answer: '' }))
+                    questions: POINT_VALUES.map((p, i) => ({ id: uid(), points: p, pointValuesIndex: i, type: 'text', question: '', answer: '' }))
                 },
                 {
                     id: uid(), name: 'Wissenschaft',
-                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, displayPoints: p, type: 'text', question: '', answer: '' }))
+                    questions: POINT_VALUES.map((p, i) => ({ id: uid(), points: p, pointValuesIndex: i, type: 'text', question: '', answer: '' }))
                 },
                 {
                     id: uid(), name: 'Kultur',
-                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, displayPoints: p, type: 'text', question: '', answer: '' }))
+                    questions: POINT_VALUES.map((p, i) => ({ id: uid(), points: p, pointValuesIndex: i, type: 'text', question: '', answer: '' }))
                 },
                 {
                     id: uid(), name: 'Sport',
-                    questions: POINT_VALUES.map(p => ({ id: uid(), points: p, displayPoints: p, type: 'text', question: '', answer: '' }))
+                    questions: POINT_VALUES.map((p, i) => ({ id: uid(), points: p, pointValuesIndex: i, type: 'text', question: '', answer: '' }))
                 },
                 ]
             };
@@ -1076,7 +1080,7 @@
             profile.categories.push({
                 id: uid(),
                 name,
-                questions: POINT_VALUES.map(p => ({ id: uid(), points: p, type: 'text', question: '', answer: '' }))
+                questions: POINT_VALUES.map((p, i) => ({ id: uid(), points: p, pointValuesIndex: i, type: 'text', question: '', answer: '' }))
             });
             inp.value = '';
             saveAll();
@@ -1127,7 +1131,7 @@
             card.innerHTML = `
                 <div class="question-settings-card-header">
                     <div class="flex-row" style="gap: 2rem">
-                        <span class="question-settings-points-badge">${question.displayPoints}</span>
+                        <span class="question-settings-points-badge">${POINT_VALUES[question.pointValuesIndex]}</span>
                         <div class="flex-row">
                             <label class="field-label">Punktewert:</label>
                             <input class="input-field" style="width: 4rem" oninput="updateQuestionPoints(${categoryId},${questionId},this.value)" value="${question.points}"/>
@@ -1285,8 +1289,9 @@
                 row.innerHTML = `
                 <span>${escHtml(p.name)}${id === state.activeProfileId ? ' <span class="text-muted">(aktiv)</span>' : ''}</span>
                 <div class="flex-row">
-                    <button class="btn btn-sm" onclick="selectProfile('${id}')">Wählen</button>
+                    <button class="btn btn-sm" onclick="selectProfile('${id}')">✓</button>
                     <button class="btn btn-sm" onclick="duplicateProfile('${id}')">Kopie</button>
+                    <button class="btn btn-sm" onclick="exportProfile('${id}')">↧</button>
                     ${Object.keys(state.profiles).length > 1 ? `<button class="btn btn-sm" onclick="deleteProfile('${id}')">✕</button>` : ''}
                 </div>
                 `;
@@ -1305,6 +1310,75 @@
             renderProfileManagerModal();
             renderCategoriesList();
             renderProfileSelector('profileSelect');
+        }
+
+        async function uploadProfile(input) {
+            const file = input.files[0];
+
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                
+                // check if uploaded data has the necessary fields
+                if (!validProfileData(data)) {
+                    toast('Die Datei ist fehlerhaft', 'error');
+                    return;
+                }
+
+                const id = uid();
+                state.profiles[id] = data;
+                state.activeProfileId = id;
+
+                saveAll();
+                renderProfileManagerModal();
+                renderCategoriesList();
+                renderProfileSelector('profileSelect');
+            } catch (e) {
+                toast('Datei konnte nicht eingelesen werden', 'error');
+            }
+        }
+
+        function validProfileData(data) {
+            const keys = Object.keys(data);
+            if (keys.length > 2 || !keys.includes('categories') || !keys.includes('name') ) {
+                return false;
+            }
+
+            data.categories.forEach(category => {
+                if (!validCategorieData(category)) {
+                    return false;
+                }               
+            })
+
+            return true;
+        }
+
+        function validCategorieData(categorie) {
+            const keys = Object.keys(categorie);
+
+            if (keys.length > 3 || !keys.includes('id') || !keys.includes('name') || !keys.includes('questions')) {
+                return false;
+            }
+
+            categorie.questions.forEach(question => {
+                if (!validQuestionsData(question)) {
+                    return false;
+                }               
+            })
+
+            return true;
+        }
+
+        function validQuestionsData(question) {
+            const keys = Object.keys(question);
+
+            if (keys.length > 6 || !keys.includes('answer') || !keys.includes('answerType') || !keys.includes('id') || !keys.includes('points') || !keys.includes('question') || !keys.includes('type')) {
+                return false
+            }
+
+            return true;
         }
 
         function selectProfile(id) {
@@ -1331,6 +1405,20 @@
             saveAll();
             renderProfileManagerModal();
             renderProfileSelector('profileSelect');
+        }
+
+        function exportProfile(id) {
+            const profile = state.profiles[id];
+            
+            if(!profile) return;
+            // from https://stackoverflow.com/a/30800715
+            const data = "data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(profile, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute('href', data);
+            downloadAnchor.setAttribute("download", "couchpardy_profile_" + profile.name + ".json");
+            document.body.appendChild(downloadAnchor); // required for firefox
+            downloadAnchor.click();
+            downloadAnchor.remove();
         }
 
         function deleteProfile(id) {

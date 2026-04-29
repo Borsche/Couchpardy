@@ -776,8 +776,7 @@
                     <select class="profile-select" id="profileSelect" onchange="loadProfile(this.value)"></select>
                     <button class="btn btn-sm" onclick="openProfileManager()">Profile</button>
                     <button class="btn btn-sm" onclick="openSpecialsManager()">Specials</button>
-                    <button class="btn btn-sm" onclick="saveCurrentProfile()">Speichern</button>
-                    <button class="btn btn-sm" onclick="showScreen('screen-menu')">< Zurück</button>
+                    <button class="btn btn-sm" onclick="saveAndQuit()">< Zurück</button>
                 </div>
             </div>
             <div class="settings-body">
@@ -1046,9 +1045,10 @@
             document.getElementById('categoryEditor').innerHTML = '<p class="settings-empty">← Wähle eine Kategorie oder füge eine neue hinzu</p>';
         }
 
-        function saveCurrentProfile() {
+        function saveAndQuit() {
             saveAll();
             toast('Profil gespeichert!', 'success');
+            showScreen('screen-menu')
         }
 
         function getActiveProfile() { return state.profiles[state.activeProfileId]; }
